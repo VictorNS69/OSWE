@@ -35,8 +35,8 @@ def parse_args():
     parser.add_argument("-t", "--target",   required=True,  help="Target base URL (e.g. http://192.168.1.10)")
     parser.add_argument("-l", "--lhost",    required=True,  help="Attacker IP for reverse shell")
     parser.add_argument("-p", "--lport",    required=True,  type=int,   help="Attacker port for reverse shell")
-    parser.add_argument("-wp", "--wport",    required=False,  default=80, type=int,   help="Attacker port for http server")
-    parser.add_argument("--proxy",          action="store_true", default=False,  help="Enable Burp default proxies (8080)")
+    parser.add_argument("-wp", "--wport",   required=False, default=80, type=int,   help="Attacker port for http server")
+    parser.add_argument("--proxy",          action="store_true", default=False, help="Enable Burp default proxies (8080)")
     parser.add_argument("--no-verify",      action="store_true", default=True,  help="Disable SSL verification")
     parser.add_argument("-d", "--debug",    action="store_true", default=False, help="Debug mode")
 
