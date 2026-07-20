@@ -30,6 +30,48 @@ class log():
 # ...
 parser.add_argument('-d', '--debug', action='store_true', default=False, help='Enable debugging output')
 ```
+## Random Strings
+```python
+# a-zA-Z
+LETTERS = string.ascii_letters
+# a-zA-Z0-9
+LETTERS_NUM = string.ascii_letters + string.digits
+# a-zA-Z0-9!@#$...
+LETTERS_NUM_SYMBOLS = string.ascii_letters + string.digits + string.punctuation
+LENGTH = 8
+
+# Letters only
+random_letters = ''.join(random.choice(LETTERS) for _ in range(LENGTH))
+# Letters + numbers
+random_alnum = ''.join(random.choice(LETTERS_NUM) for _ in range(LENGTH))
+# Letters + numbers + symbols
+random_full = ''.join(random.choice(LETTERS_NUM_SYMBOLS) for _ in range(LENGTH))
+
+print("Letters:      ", random_letters)
+print("Alphanumeric: ", random_alnum)
+print("Full charset: ", random_full)
+```
+## Encoding and Decoding
+```python
+data = "hello world"
+
+# Encode: str -> bytes -> base64 bytes -> str
+encoded = base64.b64encode(data.encode('utf-8')).decode('utf-8')
+print(encoded)
+
+# Decode: str -> base64 bytes -> bytes -> str
+decoded = base64.b64decode(encoded).decode('utf-8')
+print(decoded)
+
+# URL-safe base64 (used in JWTs, URLs — replaces +/ with -_)
+url_encoded = base64.urlsafe_b64encode(data.encode()).decode()
+print(url_encoded)
+
+url_decoded = base64.urlsafe_b64decode(url_encoded).decode()
+print(url_decoded)
+```
+> [!NOTE]
+> Use `utf-16` or `utf-16-le` for Windows/Powershell.
 
 ## Sending Requests
 ### Session Setup
@@ -82,6 +124,27 @@ print (f"Response body as text: {r.text}")
 print (f"Response output as bytes: {r.content}")
 print (f"Response output as JSON (if body is a JSON): {r.json()}")
 print (f"Location Header: {r.headers['Location']}")
+```
+### Parse HTML Responses
+```python
+r.get(url)
+soup = BeautifulSoup(r.text, "html.parser") # You can use other parsers, such us xml.parser
+
+# Helper function to get the hidden values like:
+#  <input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="70EC80A7" />
+def get_value(field_id):
+    tag = soup.find("input", {"id": field_id})
+    return tag["value"] if tag and tag.has_attr("value") else None
+
+state = {
+    "__VIEWSTATE": get_value("__VIEWSTATE"),
+    "__VIEWSTATEGENERATOR": get_value("__VIEWSTATEGENERATOR"),
+    "__VIEWSTATEENCRYPTED": get_value("__VIEWSTATEENCRYPTED"),
+    "__EVENTVALIDATION": get_value("__EVENTVALIDATION"),
+    "testing": get_value("testing"),
+}
+# to add fixed values
+state["txtArg"] = "whoami"
 ```
 
 ## Common script arguments
