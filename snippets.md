@@ -291,6 +291,15 @@ def start_file_server(host, port):
 # ...
 start_file_server("0.0.0.0", 80)
 ```
+> [!NOTE]
+> Some MIME types:
+> - Plain text:	`text/plain`
+> - JSON: `application/json`
+> - JavaScript: `text/javascript`
+> - HTML: `text/html`
+> - XML: `application/xml`
+> - Binary/octet-stream: `application/octet-stream`
+
 ### Event Triggers
 1. Add `php_file_callback = threading.Event()`
 2. In the `do_Get()` function add `php_file_callback.set()` when the file is downloaded
