@@ -1,3 +1,6 @@
+# Debug files
+lab_scripts/opencrx/tokens.txt
+
 # Keys
 *.pem
 
