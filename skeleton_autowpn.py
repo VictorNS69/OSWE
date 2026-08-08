@@ -29,6 +29,10 @@ GREY = '\033[38;5;244m'
 YELLOW = '\033[38;5;226m'
 NC = '\033[0m'
 
+# ─── Events ────────────────────────────────────────────────────────
+revshell_callback = threading.Event()
+downloaded_file_callback = threading.Event()
+
 # ─── Argument Parsing ────────────────────────────────────────────────────────
 def parse_args():
     global args
@@ -95,6 +99,8 @@ def start_listener(host, port):
 
 # ─── Shell interaction  ───────────────────────────────────────────────────────────────
 def _interact(conn):
+    revshell_callback.set()
+    time.sleep(2) # Some sleep to handle event if needed
     prompt="[shell] > "
     conn.setblocking(True)
     try:
@@ -145,6 +151,9 @@ def start_file_server(host, port):
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
             if self.path in routes:
+                downloaded_file_callback.set()
+                time.sleep(1) # Some sleep to handle event if needed
+
                 content, content_type = routes[self.path]
                 self.send_response(200)
                 self.send_header("Content-Type", content_type)
