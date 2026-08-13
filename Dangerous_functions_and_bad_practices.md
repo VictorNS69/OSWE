@@ -1,3 +1,6 @@
+## Dangerous functions list
+This is a reference list of dangerous functions/sinks by language, organized around the vulnerability classes OSWE covers (RCE, deserialization, SSTI, SQLi, etc.).
+
 ## Table of Contents
 - [Dangerous Functions List](#dangerous-functions-list)
   - [PHP](#sinks-php)
@@ -35,9 +38,6 @@
   - [Hardcoded Secrets / Credentials](#bad-hardcoded-secrets)
 
 <a id="dangerous-functions-list"></a>
-## Dangerous functions list
-This is a reference list of dangerous functions/sinks by language, organized around the vulnerability classes OSWE covers (RCE, deserialization, SSTI, SQLi, etc.).
-
 <a id="sinks-php"></a>
 ### PHP
 **Code/Command execution**
