@@ -34,28 +34,49 @@ grep -rnE --include=*.php 'extract\s*\(|create_function\s*\(|preg_replace\s*\([^
 ## Cross-Language: JWT
 
 ```bash
-grep -rnE '(verify_signature[\x27"]?\s*[:=]\s*False|verify\s*=\s*False)' .        # PyJWT/PyJWT-style disabled verification
-grep -rnE 'jwt\.decode\s*\(|jsonwebtoken|jwt\.verify\s*\(' .                       # locate all decode/verify call sites for manual algorithm-pinning check
-grep -rnE 'alg.{0,10}none|"none"' . | grep -i jwt                                  # alg:none acceptance
-grep -rnE 'setSigningKey\s*\(|getAlgorithm\s*\(' .                                 # Java jjwt — algorithm sourced from token vs pinned
+# Disabled signature verification (PyJWT-style)
+grep -rnE '(verify_signature[\x27"]?\s*[:=]\s*False|verify\s*=\s*False)' .
+
+# Locate all decode/verify call sites for manual algorithm-pinning check
+grep -rnE 'jwt\.decode\s*\(|jsonwebtoken|jwt\.verify\s*\(' .
+
+# alg:none acceptance
+grep -rnE 'alg.{0,10}none|"none"' . | grep -i jwt
+
+# Java jjwt — algorithm sourced from token vs pinned
+grep -rnE 'setSigningKey\s*\(|getAlgorithm\s*\(' .
 ```
 
 ## Cross-Language: Mass Assignment
 
 ```bash
-grep -rnE 'TryUpdateModel\s*\(|UpdateModel\s*\(' .                                 # ASP.NET MVC
-grep -rnE "fields\s*=\s*['\"]__all__['\"]|exclude\s*=\s*\[" .                      # Django ModelForm
-grep -rnE '\.create\s*\(\s*req\.body\s*\)|\.update\s*\(\s*req\.body\s*\)' .        # generic ORM bound directly to request body
-grep -rnE 'assign_attributes\s*\(|\.new\s*\(\s*params\[' .                         # Rails-style patterns
+# ASP.NET MVC
+grep -rnE 'TryUpdateModel\s*\(|UpdateModel\s*\(' .
+
+# Django ModelForm
+grep -rnE "fields\s*=\s*['\"]__all__['\"]|exclude\s*=\s*\[" .
+
+# Generic ORM bound directly to request body
+grep -rnE '\.create\s*\(\s*req\.body\s*\)|\.update\s*\(\s*req\.body\s*\)' .
+
+# Rails-style patterns
+grep -rnE 'assign_attributes\s*\(|\.new\s*\(\s*params\[' .
 ```
 
 ## Cross-Language: Hardcoded Secrets / Credentials
 
 ```bash
+# Literal key/value assignments for secrets
 grep -rnE '(api[_-]?key|secret|password|passwd|token)\s*[:=]\s*["\x27][A-Za-z0-9+/=_-]{8,}["\x27]' .
-grep -rnE 'SECRET_KEY\s*=\s*["\x27].+["\x27]' .                                    # Flask/Django default-left-unchanged secret
-find . -name '.env' -o -name '*.env'                                               # locate committed .env files (not a grep, but the natural next step)
-git log --all --full-history -- '**/.env' 2>/dev/null                              # .env ever committed, even if later removed
+
+# Flask/Django default-left-unchanged secret
+grep -rnE 'SECRET_KEY\s*=\s*["\x27].+["\x27]' .
+
+# Locate committed .env files (not a grep, but the natural next step)
+find . -name '.env' -o -name '*.env'
+
+# .env ever committed, even if later removed
+git log --all --full-history -- '**/.env' 2>/dev/null
 ```
 
 ## Java
@@ -172,33 +193,33 @@ Many of these are pattern/heuristic hunts, not exact sinks — expect false posi
 ## SQL
 
 ```bash
-grep -rnE 'SELECT\s+\*' .
-grep -rnE '"\s*\+\s*\w+|\.format\s*\(.*SELECT|f"[^"]*SELECT|%s.*SELECT' .
-grep -rnE '\.raw\s*\(|\.extra\s*\(|text\s*\(' .              # ORM raw escape hatches
-grep -rnE 'EXEC\s*\(\s*@|EXECUTE\s+' .                          # dynamic SQL in stored procs
+grep -rnE 'SELECT\s+\*' .                                       # over-fetching columns
+grep -rnE '"\s*\+\s*\w+|\.format\s*\(.*SELECT|f"[^"]*SELECT|%s.*SELECT' .   # string-built queries
+grep -rnE '\.raw\s*\(|\.extra\s*\(|text\s*\(' .                  # ORM raw escape hatches
+grep -rnE 'EXEC\s*\(\s*@|EXECUTE\s+' .                           # dynamic SQL in stored procs
 ```
 
 ## XSS
 
 ```bash
-grep -rnE 'innerHTML\s*=|document\.write\s*\(|outerHTML\s*=' .
-grep -rnE 'dangerouslySetInnerHTML|v-html|\[innerHTML\]' .
-grep -rnE 'unsafe-inline|unsafe-eval' .                          # weak CSP
-grep -rnE 'location\.href|document\.URL|document\.referrer' .
+grep -rnE 'innerHTML\s*=|document\.write\s*\(|outerHTML\s*=' .   # unsafe DOM writes
+grep -rnE 'dangerouslySetInnerHTML|v-html|\[innerHTML\]' .        # framework escape hatches
+grep -rnE 'unsafe-inline|unsafe-eval' .                           # weak CSP
+grep -rnE 'location\.href|document\.URL|document\.referrer' .     # DOM XSS sources feeding sinks
 ```
 
 ## PHP Type Juggling
 
 ```bash
-grep -rnE --include=*.php '==\s*\$|\$\w+\s*==' .
+grep -rnE --include=*.php '==\s*\$|\$\w+\s*==' .                                                  # loose comparison
 grep -rnE --include=*.php 'in_array\s*\([^,]+,[^,]+\)\s*;|array_search\s*\([^,]+,[^,]+\)\s*;' .   # missing strict 3rd param
-grep -rnE --include=*.php 'is_numeric\s*\(' .
+grep -rnE --include=*.php 'is_numeric\s*\(' .                                                      # weak numeric validation
 ```
 
 ## Deserialization (cross-language, generic)
 
 ```bash
-grep -rnE 'unserialize\s*\(|ObjectInputStream|BinaryFormatter|pickle\.(load|loads)|yaml\.load\s*\(' .
+grep -rnE 'unserialize\s*\(|ObjectInputStream|BinaryFormatter|pickle\.(load|loads)|yaml\.load\s*\(' .   # untrusted-input deserialization sinks
 grep -rnE '__wakeup|__destruct|__toString' .                     # PHP magic methods
 ```
 
@@ -211,30 +232,30 @@ grep -rnE 'Template\s*\(\s*\w*(input|param|request)|render_template_string\s*\('
 ## XXE
 
 ```bash
-grep -rnE 'setFeature\s*\(.*external-general-entities|DTD|DocumentBuilderFactory|XmlDocument\(' .
+grep -rnE 'setFeature\s*\(.*external-general-entities|DTD|DocumentBuilderFactory|XmlDocument\(' .   # parser config not hardened
 grep -rnE '\.svg"|\.docx"|\.xlsx"|Content-Type.*xml' .           # XML-bearing upload paths
 ```
 
 ## CSRF / CORS
 
 ```bash
-grep -rnE 'Access-Control-Allow-Origin' .
-grep -rnE 'SameSite\s*=\s*(Lax|None)' .
-grep -rnE 'request\.headers\[.Origin.\]|req\.get\s*\(.Origin.\)' .
+grep -rnE 'Access-Control-Allow-Origin' .                         # CORS header handling — check for wildcard/reflection
+grep -rnE 'SameSite\s*=\s*(Lax|None)' .                           # cookie attribute weaker than Strict
+grep -rnE 'request\.headers\[.Origin.\]|req\.get\s*\(.Origin.\)' . # Origin reflected without allowlist check
 ```
 
 ## SSRF
 
 ```bash
 grep -rnE '127\.0\.0\.1|localhost' . | grep -iE 'block|deny|filter'   # incomplete blacklists
-grep -rnE 'requests\.get\s*\(|http\.Get\s*\(|urlopen\s*\(|fetch\s*\(' .
+grep -rnE 'requests\.get\s*\(|http\.Get\s*\(|urlopen\s*\(|fetch\s*\(' .   # outbound requests to user-supplied URLs
 ```
 
 ## WebSocket
 
 ```bash
-grep -rnE 'WebSocket|new WebSocket|ws://|wss://' .
-grep -rnE 'origin\s*===|checkOrigin|verifyClient' .
+grep -rnE 'WebSocket|new WebSocket|ws://|wss://' .                # handshake/connection sites — check origin validation nearby
+grep -rnE 'origin\s*===|checkOrigin|verifyClient' .               # existing origin-check logic to audit
 ```
 
 ## NoSQL Injection
@@ -246,8 +267,8 @@ grep -rnE '\$where|find\s*\(\s*req\.(body|query|params)\s*\)' .
 ## Prototype Pollution
 
 ```bash
-grep -rnE '__proto__|constructor\.prototype|Object\.assign\s*\(.*req\.(body|query)' .
-grep -rnE 'merge\s*\(|deepmerge\s*\(|_\.extend\s*\(' .
+grep -rnE '__proto__|constructor\.prototype|Object\.assign\s*\(.*req\.(body|query)' .   # pollution-prone key access
+grep -rnE 'merge\s*\(|deepmerge\s*\(|_\.extend\s*\(' .                                   # deep-merge utilities to audit for key blocking
 ```
 
 ## LDAP Injection
