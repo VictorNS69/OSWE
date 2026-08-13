@@ -2,6 +2,16 @@
 
 Companion to `Dangerous_functions_and_bad_practices.md`. Every block: `grep -rnE` (recursive, line numbers, extended regex) scoped by file extension. Adjust path (`.` below) to target dir. Drop `-r .` for single-file scans.
 
+**Noise reduction**: prepend `--exclude-dir={node_modules,vendor,.git,dist,build}` to any command below to skip dependency/build trees, e.g.:
+```bash
+grep -rnE --exclude-dir={node_modules,vendor,.git,dist,build} --include=*.php 'eval\s*\(' .
+```
+
+**Faster alternative**: if `rg` (ripgrep) is installed, it respects `.gitignore` automatically and is a drop-in replacement — same `-E` pattern, no `--include`/`--exclude-dir` needed:
+```bash
+rg -n --type php 'eval\s*\('
+```
+
 ## PHP
 
 ```bash
@@ -19,6 +29,33 @@ grep -rnE --include=*.php '==[^=]|in_array\s*\(|switch\s*\(|md5\s*\(.*==|sha1\s*
 
 # Other sinks
 grep -rnE --include=*.php 'extract\s*\(|create_function\s*\(|preg_replace\s*\([^)]*/e|call_user_func(_array)?\s*\(' .
+```
+
+## Cross-Language: JWT
+
+```bash
+grep -rnE '(verify_signature[\x27"]?\s*[:=]\s*False|verify\s*=\s*False)' .        # PyJWT/PyJWT-style disabled verification
+grep -rnE 'jwt\.decode\s*\(|jsonwebtoken|jwt\.verify\s*\(' .                       # locate all decode/verify call sites for manual algorithm-pinning check
+grep -rnE 'alg.{0,10}none|"none"' . | grep -i jwt                                  # alg:none acceptance
+grep -rnE 'setSigningKey\s*\(|getAlgorithm\s*\(' .                                 # Java jjwt — algorithm sourced from token vs pinned
+```
+
+## Cross-Language: Mass Assignment
+
+```bash
+grep -rnE 'TryUpdateModel\s*\(|UpdateModel\s*\(' .                                 # ASP.NET MVC
+grep -rnE "fields\s*=\s*['\"]__all__['\"]|exclude\s*=\s*\[" .                      # Django ModelForm
+grep -rnE '\.create\s*\(\s*req\.body\s*\)|\.update\s*\(\s*req\.body\s*\)' .        # generic ORM bound directly to request body
+grep -rnE 'assign_attributes\s*\(|\.new\s*\(\s*params\[' .                         # Rails-style patterns
+```
+
+## Cross-Language: Hardcoded Secrets / Credentials
+
+```bash
+grep -rnE '(api[_-]?key|secret|password|passwd|token)\s*[:=]\s*["\x27][A-Za-z0-9+/=_-]{8,}["\x27]' .
+grep -rnE 'SECRET_KEY\s*=\s*["\x27].+["\x27]' .                                    # Flask/Django default-left-unchanged secret
+find . -name '.env' -o -name '*.env'                                               # locate committed .env files (not a grep, but the natural next step)
+git log --all --full-history -- '**/.env' 2>/dev/null                              # .env ever committed, even if later removed
 ```
 
 ## Java
@@ -46,8 +83,9 @@ grep -rnE --include=*.java '\bStatement\b.*createStatement|executeQuery\s*\(.*\+
 # Code execution
 grep -rnE --include=*.py '\beval\s*\(|\bexec\s*\(|compile\s*\(|pickle\.(load|loads)\s*\(|yaml\.load\s*\(|subprocess\.(call|run|Popen)\s*\(.*shell\s*=\s*True|os\.system\s*\(|os\.popen\s*\(' .
 
-# SSTI
+# SSTI / autoescape bypass
 grep -rnE --include=*.py 'Template\s*\(|render_template_string\s*\(' .
+grep -rnE --include=*.py --include=*.html '\|\s*safe\b|Markup\s*\(|autoescape\s*=\s*False|\{%\s*autoescape\s+false\s*%\}' .
 
 # Other deserialization
 grep -rnE --include=*.py 'marshal\.loads\s*\(|\bshelve\b' .
@@ -114,6 +152,9 @@ grep -rnE --include=*.cs 'Process\.Start\s*\(|CSharpCodeProvider|Activator\.Crea
 
 # SQL
 grep -rnE --include=*.cs 'SqlCommand\s*\(.*\+|new SqlCommand' .
+
+# XXE — XmlResolver left enabled
+grep -rnE --include=*.cs 'XmlResolver\s*=\s*new XmlUrlResolver|XmlDocument\s*\(' .
 ```
 
 ## PostgreSQL (SQL files / inline queries)

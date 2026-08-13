@@ -57,9 +57,17 @@ This is a a reference list of dangerous functions/sinks by language, organized a
 - `subprocess.call/run/Popen` with `shell=True` and unsanitized input
 - `os.system()`, `os.popen()`
 
-**Template injection (SSTI)**
+**Template injection (SSTI) / autoescape bypass**
 - Jinja2 `Template(user_input).render()` — direct SSTI if user controls template string
 - `render_template_string()` (Flask) with unsanitized input
+- Jinja2 `|safe` filter, `Markup()`, `{% autoescape false %}` — explicitly disables auto-escaping on a variable/block, reopening XSS even when the engine is otherwise safe
+- Flask `Markup(user_input)` / `app.jinja_env.autoescape = False` — global autoescape disable
+
+**JWT**
+- `jwt.decode(token, options={"verify_signature": False})` (PyJWT) — signature check disabled
+- `jwt.decode(token, verify=False)` — older PyJWT API, same issue
+- `jsonwebtoken.verify()` (Node) called with `algorithms` not pinned — allows `alg: none` or RS256/HS256 confusion (attacker signs with public key as HMAC secret)
+- `jjwt`/`java-jwt` `.setSigningKey()` accepting the algorithm from the token header instead of pinning it server-side
 
 **Other deserialization**
 - `marshal.loads()`
@@ -148,6 +156,16 @@ This is a a reference list of dangerous functions/sinks by language, organized a
 - `lo_import`/`lo_export` (large object functions) — file read/write primitives
 - `CREATE FUNCTION ... LANGUAGE plpgsql/plpythonu` — if untrusted procedural languages are enabled, arbitrary code execution
 - `dblink`/`dblink_connect` — can be abused for SSRF-like internal connections
+
+### Mass Assignment Binders
+- ASP.NET MVC `UpdateModel()`/`TryUpdateModel()` without an explicit include-list — over-posting lets attacker set fields not shown on the form (e.g. `IsAdmin`)
+- Django `ModelForm` with `fields = '__all__'` or `exclude` instead of an explicit `fields` allowlist
+- Rails-style `.new(params[...])`/`assign_attributes` without strong-parameter filtering (pattern shows up in Rails-influenced frameworks generally)
+- Any ORM's `Model.create(req.body)` / `Model.update(req.body)` pattern — binds the entire request body straight to model attributes
+
+### Hardcoded Secrets / Credentials
+- API keys, DB passwords, JWT signing secrets, encryption keys embedded directly in source (`.env` committed to VCS, config files with literal secrets, connection strings with plaintext credentials)
+- Default/example secrets shipped in framework boilerplate and never rotated (e.g. Flask/Django `SECRET_KEY` left as scaffold default)
 ## Bad practices list
 This is a reference list of bad-practices breakdown by vulnerability type.
 ### SQL
@@ -192,6 +210,7 @@ This is a reference list of bad-practices breakdown by vulnerability type.
 
 ### XXE 
 - **Not disabling DTDs/external entities** on XML parsers — this is the default-insecure state for many older Java (`DocumentBuilderFactory`), .NET, and libxml-based parsers
+- **.NET specifically**: `XmlDocument.XmlResolver` left as default (non-null) — pre-.NET Framework 4.5.2 this resolves external entities out of the box; even on patched versions, explicitly setting `XmlResolver = new XmlUrlResolver()` reintroduces the hole
 - **Accepting XML from any user-facing endpoint that "shouldn't" involve XML** — SOAP fallbacks, SVG uploads (SVG is XML), DOCX/XLSX uploads (zipped XML), RSS/Atom import features
 - **Enabling external entity resolution "just in case"** for legacy SOAP interoperability without an allowlist
 - **Trusting client-supplied `Content-Type`** to decide whether to parse as XML
@@ -263,4 +282,23 @@ Occasionally touches token-prediction bugs:
 - **Java**: `Files.copy()`/`FileOutputStream` built from user-supplied filename
 - **Node**: `multer` disk storage with user-controlled `filename` callback
 - **.NET**: `Request.Files[...].SaveAs()` with unsanitized path
+
+### JWT
+- **Accepting `alg: none`** — server skips signature verification entirely if the token header says so and the library isn't pinned to expected algorithms
+- **Algorithm confusion (RS256 → HS256)** — server verifies with the public key as if it were an HMAC secret, letting an attacker self-sign a token using the (often-known) public key
+- **Not verifying signature at all** during development/debugging (`verify_signature: False`) and shipping that config to production
+- **Weak/predictable/short HMAC secrets** — brute-forceable offline once a valid token is captured
+- **Trusting claims (`role`, `isAdmin`) without re-validating server-side state** — JWT is a bearer credential, not a source of truth for authorization that can change (revoked/demoted users still "valid" until expiry)
+- **No expiry (`exp`) enforcement, or accepting already-expired tokens** due to missing/incorrect validation
+
+### Mass Assignment
+- **Binding the entire request body/params object directly to a model/entity** without an explicit allowlist of bindable fields — lets an attacker set fields never exposed on the form (`isAdmin`, `role`, `balance`, `userId` on someone else's record)
+- **Relying on the client to only send expected fields** — the request is attacker-controlled; extra JSON keys are free for the attacker to add
+- **Framework "convenience" binders** (`ModelForm(fields='__all__')`, `UpdateModel()` without includes, ORM `create(req.body)`) — designed for trusted input, misapplied to user input
+
+### Hardcoded Secrets / Credentials
+- **Committing `.env`, config files, or connection strings with real credentials** to version control — history persists even after later removal/rotation
+- **Shipping framework scaffold secrets unchanged** (default `SECRET_KEY`, default admin passwords) to production
+- **Embedding API keys/tokens in client-side JS** — anything shipped to the browser is public regardless of minification/obfuscation
+- **Logging secrets** (auth headers, full request bodies with tokens) to application logs that have broader read access than the secret itself warrants
 
