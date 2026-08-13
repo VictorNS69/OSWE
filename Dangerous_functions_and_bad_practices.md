@@ -1,5 +1,44 @@
+## Table of Contents
+- [Dangerous Functions List](#dangerous-functions-list)
+  - [PHP](#sinks-php)
+  - [Java](#sinks-java)
+  - [Python](#sinks-python)
+  - [Go](#sinks-go)
+  - [Node.js / JavaScript](#sinks-nodejs)
+  - [.NET / C#](#sinks-dotnet)
+  - [PostgreSQL](#sinks-postgresql)
+  - [JWT](#sinks-jwt)
+  - [Mass Assignment Binders](#sinks-mass-assignment)
+  - [Hardcoded Secrets / Credentials](#sinks-hardcoded-secrets)
+- [Bad Practices List](#bad-practices-list)
+  - [SQL](#bad-sql)
+  - [XSS](#bad-xss)
+  - [PHP Type Juggling](#bad-php-type-juggling)
+  - [Deserialization](#bad-deserialization)
+  - [SSTI](#bad-ssti)
+  - [XXE](#bad-xxe)
+  - [CSRF / CORS](#bad-csrf-cors)
+  - [SSRF](#bad-ssrf)
+  - [WebSocket](#bad-websocket)
+  - [NoSQL Injection](#bad-nosql-injection)
+  - [Prototype Pollution](#bad-prototype-pollution)
+  - [LDAP Injection](#bad-ldap-injection)
+  - [XPath Injection](#bad-xpath-injection)
+  - [Open Redirect](#bad-open-redirect)
+  - [Zip Slip / Archive Path Traversal](#bad-zip-slip)
+  - [JNDI Injection / Log Injection (Log4Shell-class)](#bad-jndi-log-injection)
+  - [ReDoS (Regex Denial of Service)](#bad-redos)
+  - [Weak Cryptography / Insecure Randomness](#bad-weak-crypto)
+  - [File Upload / Path Traversal](#bad-file-upload)
+  - [JWT](#bad-jwt)
+  - [Mass Assignment](#bad-mass-assignment)
+  - [Hardcoded Secrets / Credentials](#bad-hardcoded-secrets)
+
+<a id="dangerous-functions-list"></a>
 ## Dangerous functions list
 This is a reference list of dangerous functions/sinks by language, organized around the vulnerability classes OSWE covers (RCE, deserialization, SSTI, SQLi, etc.).
+
+<a id="sinks-php"></a>
 ### PHP
 **Code/Command execution**
 - `eval()` — executes arbitrary PHP code
@@ -26,6 +65,7 @@ This is a reference list of dangerous functions/sinks by language, organized aro
 - `preg_replace()` with `/e` modifier (removed in PHP 7+, but seen in legacy code)
 - `call_user_func()`, `call_user_func_array()` — with user-controlled callback names
 
+<a id="sinks-java"></a>
 ### Java
 **Deserialization**
 - `ObjectInputStream.readObject()` — classic Java deserialization gadget chains (ysoserial)
@@ -49,6 +89,7 @@ This is a reference list of dangerous functions/sinks by language, organized aro
 **SQL**
 - `Statement` (vs `PreparedStatement`) with string concatenation
 
+<a id="sinks-python"></a>
 ### Python
 **Code execution**
 - `eval()`, `exec()` — arbitrary code execution
@@ -72,6 +113,7 @@ This is a reference list of dangerous functions/sinks by language, organized aro
 - `__import__()` with user-controlled module names
 - `getattr()`/`setattr()` chains on user input (attribute-injection primitives)
 
+<a id="sinks-go"></a>
 ### Go
 **Code/Command execution**
 - `os/exec.Command()` — safe if args are passed separately, but dangerous when built via `sh -c` with concatenated user input, or when the command/binary name itself is user-controlled
@@ -113,6 +155,7 @@ This is a reference list of dangerous functions/sinks by language, organized aro
 **Reflection**
 - `reflect.Value.Call()` / `reflect.Value.MethodByName()` — invoking methods by attacker-controlled name string, similar risk profile to Java reflection or PHP `call_user_func()`
 
+<a id="sinks-nodejs"></a>
 ### Node.js / JavaScript
 **Code execution**
 - `eval()`
@@ -130,6 +173,7 @@ This is a reference list of dangerous functions/sinks by language, organized aro
 **SQL/NoSQL**
 - String-concatenated queries; MongoDB operator injection via unsanitized objects (`$where`, `$ne`, etc. from JSON body)
 
+<a id="sinks-dotnet"></a>
 ### .NET / C#
 **Deserialization** (huge OSWE focus area)
 - `BinaryFormatter.Deserialize()` — the classic one, deprecated but everywhere in legacy code
@@ -148,29 +192,37 @@ This is a reference list of dangerous functions/sinks by language, organized aro
 **SQL**
 - `SqlCommand` built via string concatenation instead of parameterized queries
 
+<a id="sinks-postgresql"></a>
 ### PostgreSQL
 - `COPY ... FROM PROGRAM` — direct OS command execution from SQL
 - `lo_import`/`lo_export` (large object functions) — file read/write primitives
 - `CREATE FUNCTION ... LANGUAGE plpgsql/plpythonu` — if untrusted procedural languages are enabled, arbitrary code execution
 - `dblink`/`dblink_connect` — can be abused for SSRF-like internal connections
 
+<a id="sinks-jwt"></a>
 ### JWT
 - `jwt.decode(token, options={"verify_signature": False})` (PyJWT) — signature check disabled
 - `jwt.decode(token, verify=False)` — older PyJWT API, same issue
 - `jsonwebtoken.verify()` (Node) called with `algorithms` not pinned — allows `alg: none` or RS256/HS256 confusion (attacker signs with public key as HMAC secret)
 - `jjwt`/`java-jwt` `.setSigningKey()` accepting the algorithm from the token header instead of pinning it server-side
 
+<a id="sinks-mass-assignment"></a>
 ### Mass Assignment Binders
 - ASP.NET MVC `UpdateModel()`/`TryUpdateModel()` without an explicit include-list — over-posting lets attacker set fields not shown on the form (e.g. `IsAdmin`)
 - Django `ModelForm` with `fields = '__all__'` or `exclude` instead of an explicit `fields` allowlist
 - Rails-style `.new(params[...])`/`assign_attributes` without strong-parameter filtering (pattern shows up in Rails-influenced frameworks generally)
 - Any ORM's `Model.create(req.body)` / `Model.update(req.body)` pattern — binds the entire request body straight to model attributes
 
+<a id="sinks-hardcoded-secrets"></a>
 ### Hardcoded Secrets / Credentials
 - API keys, DB passwords, JWT signing secrets, encryption keys embedded directly in source (`.env` committed to VCS, config files with literal secrets, connection strings with plaintext credentials)
 - Default/example secrets shipped in framework boilerplate and never rotated (e.g. Flask/Django `SECRET_KEY` left as scaffold default)
+
+<a id="bad-practices-list"></a>
 ## Bad practices list
 This is a reference list of bad-practices breakdown by vulnerability type.
+
+<a id="bad-sql"></a>
 ### SQL
 - **`SELECT *`** — leaks columns you didn't intend to expose (password hashes, tokens, internal flags) if the result set is ever serialized to JSON/API output; also breaks blind-SQLi enumeration assumptions when column count matters for `UNION` attacks, and makes it harder to reason about what an injected query actually returns
 - **String concatenation/interpolation into queries** instead of parameterized queries/prepared statements — the root cause of virtually all SQLi
@@ -181,6 +233,7 @@ This is a reference list of bad-practices breakdown by vulnerability type.
 - **Verbose SQL error messages returned to the client** — enables error-based injection instead of forcing blind techniques
 - **Stored procedures built via dynamic SQL internally** (`EXEC(@sql)` in MSSQL, similar in Postgres `EXECUTE`) — pushes the injection risk into the DB layer where devs feel falsely safe
 
+<a id="bad-xss"></a>
 ### XSS
 - **Directly writing user input into HTML** without context-aware output encoding (HTML entity encode for body, JS-string escape for `<script>` context, URL-encode for attributes/URLs)
 - **Using `innerHTML`, `document.write()`, `outerHTML`** instead of `textContent`/`innerText` on untrusted data
@@ -191,12 +244,14 @@ This is a reference list of bad-practices breakdown by vulnerability type.
 - **Weak/missing CSP**, or CSP with `unsafe-inline`/`unsafe-eval` — defeats the point of the mitigation
 - **DOM XSS sinks** — `location.href`, `document.URL`, `document.referrer` fed into `eval`, `innerHTML`, `setTimeout(string)`, `setAttribute('href'/'src')` without validation
 
+<a id="bad-php-type-juggling"></a>
 ### PHP Type Juggling
 - **Loose comparison (`==`, `switch`) on attacker-controlled values**, especially against hashes — `"0e12345" == "0e67890"` both juggle to `0`
 - **`in_array()`/`array_search()` without strict mode** (missing third `true` param)
 - **Comparing user password/token input with `==` instead of `hash_equals()`** — also opens timing-attack risk
 - **Relying on `is_numeric()` alone** for validation — accepts scientific notation, hex-like strings in older PHP, leading to unexpected juggling downstream
 
+<a id="bad-deserialization"></a>
 ### Deserialization
 - **Deserializing user-controlled input at all**, in any language, without integrity verification (HMAC/signature) beforehand
 - **PHP**: `unserialize()` on cookies/session data/cache values; autoloading classes that have exploitable `__wakeup()`/`__destruct()`/`__toString()` magic methods
@@ -205,12 +260,14 @@ This is a reference list of bad-practices breakdown by vulnerability type.
 - **Python**: `pickle` on anything from a network boundary, cache, or queue message; `yaml.load()` instead of `safe_load()`
 - **General**: trusting that "it's internal" data (Redis cache, message queue, cookie) is safe to deserialize just because it didn't come directly from an HTTP body
 
+<a id="bad-ssti"></a>
 ### SSTI
 - **Passing user input directly as the template string** (`Template(user_input)`, `render_template_string(user_input)`) instead of only as template _variables_
 - **Concatenating user input into a template before rendering** — even indirectly, e.g. building an email/report template from a user-supplied "name" field
 - **Trusting "harmless" template contexts** (search results pages, error messages, "welcome {name}" banners) — these are the classic places SSTI hides
 - **Not sandboxing the template engine** when user-authored templates are a legitimate feature (e.g. letting users customize an email template) — needs a restricted execution environment, not the default engine
 
+<a id="bad-xxe"></a>
 ### XXE
 - **Not disabling DTDs/external entities** on XML parsers — this is the default-insecure state for many older Java (`DocumentBuilderFactory`), .NET, and libxml-based parsers
 - **.NET specifically**: `XmlDocument.XmlResolver` left as default (non-null) — pre-.NET Framework 4.5.2 this resolves external entities out of the box; even on patched versions, explicitly setting `XmlResolver = new XmlUrlResolver()` reintroduces the hole
@@ -218,6 +275,7 @@ This is a reference list of bad-practices breakdown by vulnerability type.
 - **Enabling external entity resolution "just in case"** for legacy SOAP interoperability without an allowlist
 - **Trusting client-supplied `Content-Type`** to decide whether to parse as XML
 
+<a id="bad-csrf-cors"></a>
 ### CSRF / CORS
 - **Missing or predictable CSRF tokens**, or tokens not tied to session/validated server-side
 - **Accepting CSRF token from a request param but not enforcing it on state-changing GET requests**
@@ -226,39 +284,46 @@ This is a reference list of bad-practices breakdown by vulnerability type.
 - **Relying on `SameSite` cookies alone** without CSRF tokens for high-value actions — `SameSite=Lax` still allows top-level navigation GETs
 - **Trusting `Referer`/`Origin` header presence/absence as the sole CSRF defense** — headers can be stripped by some clients/proxies
 
+<a id="bad-ssrf"></a>
 ### SSRF
 - **No allowlist on outbound request destinations** — app fetches any URL the user supplies (webhooks, "import from URL", PDF generators, image proxies)
 - **Blacklisting `127.0.0.1`/`localhost` only** — misses `0.0.0.0`, IPv6 `::1`, decimal/octal/hex IP encodings, DNS rebinding, and cloud metadata IPs (`169.254.169.254`)
 - **Not validating redirects** — first request passes the filter, but the server follows a redirect to an internal resource
 - **Trusting internal services to not need auth** "because SSRF can't reach them anyway" — the false assumption that causes real damage once SSRF lands
 
+<a id="bad-websocket"></a>
 ### WebSocket
 - **No origin validation on the WebSocket handshake** — allows cross-site WebSocket hijacking (CSWSH), since the browser's SOP doesn't restrict WS connections the way it does `fetch`/XHR
 - **Relying on cookies alone for WS auth** without a CSRF-equivalent token in the handshake, given CSWSH bypasses SOP
 - **Treating WebSocket messages as inherently trusted** once the connection is authenticated — not re-validating/sanitizing each message server-side (injection points reappear per-message)
 
+<a id="bad-nosql-injection"></a>
 ### NoSQL Injection
 - **Passing raw JSON body/query params directly into query objects** (e.g. MongoDB `find(req.body)`) — lets attackers inject operators like `$ne`, `$gt`, `$where`
 - **`$where` clauses built from string concatenation** — this is basically `eval()` inside MongoDB
 - **Not type-checking input** before it reaches the query builder — a string field expecting a scalar receiving an object silently changes query semantics
 
+<a id="bad-prototype-pollution"></a>
 ### Prototype Pollution
 - **Deep-merge/extend utilities operating on user-controlled keys** without blocking `__proto__`, `constructor`, `prototype`
 - **Recursive `JSON.parse()` + merge patterns** for config/settings objects sourced from user input
 - **Trusting that pollution "just breaks things"** rather than treating it as a gadget chain precursor — in Node apps it frequently chains into RCE via polluted `child_process` options or template engine settings
 
+<a id="bad-ldap-injection"></a>
 ### LDAP Injection
 - **Java**: `DirContext.search()`, `NamingEnumeration` built from concatenated filter strings
 - **PHP**: `ldap_search()`, `ldap_bind()` with unsanitized DN/filter strings
 - **.NET**: `DirectorySearcher.Filter` set via string concatenation
 - **Python**: `ldap3`/`python-ldap` `search_s()` with unsanitized filters
 
+<a id="bad-xpath-injection"></a>
 ### XPath Injection
 - **Java**: `XPath.evaluate()`, `XPathExpression.evaluate()`
 - **PHP**: `SimpleXMLElement->xpath()`, `DOMXPath->query()`
 - **.NET**: `XmlDocument.SelectNodes()`/`SelectSingleNode()` with concatenated XPath
 - **Python**: `lxml.etree.XPath()` with user input
 
+<a id="bad-open-redirect"></a>
 ### Open Redirect
 - **PHP**: `header("Location: " . $_GET['url'])`
 - **Java**: `response.sendRedirect()`
@@ -266,19 +331,23 @@ This is a reference list of bad-practices breakdown by vulnerability type.
 - **Node**: `res.redirect()`
 - **Python**: Flask `redirect()`, Django `HttpResponseRedirect()`
 
+<a id="bad-zip-slip"></a>
 ### Zip Slip / Archive Path Traversal
 - **Python**: `tarfile.extractall()`, `zipfile.extractall()` — extracted entry names can contain `../`
 - **Java**: `ZipInputStream` + manual `getName()` used to build output paths without normalization
 - **Node**: `extract-zip`, `adm-zip` used without path validation
 - **PHP**: `ZipArchive::extractTo()`
 
+<a id="bad-jndi-log-injection"></a>
 ### JNDI Injection / Log Injection (Log4Shell-class)
 - **Java**: `InitialContext.lookup()` on attacker-influenced strings; `Logger.log()`/`logger.info()` when the logging library resolves lookup patterns (`${jndi:...}`) inside logged strings — the actual Log4Shell mechanism
 - **General**: any logging call that writes raw user input without neutralizing format-string-like syntax
 
+<a id="bad-redos"></a>
 ### ReDoS (Regex Denial of Service)
 - **All languages**: `Regex.Match()` (.NET), `re.match()`/`re.search()` (Python), `preg_match()` (PHP), `String.matches()`/`Pattern.compile()` (Java), `RegExp.test()` (JS) — when the pattern itself (not just the input) is attacker-influenced, or when a vulnerable pattern with catastrophic backtracking is applied to attacker-controlled input
 
+<a id="bad-weak-crypto"></a>
 ### Weak Cryptography / Insecure Randomness
 Occasionally touches token-prediction bugs:
 - **PHP**: `mt_rand()`, `rand()` (not cryptographically secure — use `random_bytes()`/`random_int()`); `md5()`/`sha1()` for password hashing (use `password_hash()`)
@@ -288,12 +357,14 @@ Occasionally touches token-prediction bugs:
 - **.NET**: `System.Random` (predictable — use `RNGCryptoServiceProvider`/`RandomNumberGenerator`)
 - **All**: ECB cipher mode, hardcoded IVs/keys, `DES`/`RC4` usage
 
+<a id="bad-file-upload"></a>
 ### File Upload / Path Traversal (as its own class, not folded into LFI)
 - **PHP**: `move_uploaded_file()` with unsanitized destination path; trusting client-supplied `Content-Type` or extension
 - **Java**: `Files.copy()`/`FileOutputStream` built from user-supplied filename
 - **Node**: `multer` disk storage with user-controlled `filename` callback
 - **.NET**: `Request.Files[...].SaveAs()` with unsanitized path
 
+<a id="bad-jwt"></a>
 ### JWT
 - **Accepting `alg: none`** — server skips signature verification entirely if the token header says so and the library isn't pinned to expected algorithms
 - **Algorithm confusion (RS256 → HS256)** — server verifies with the public key as if it were an HMAC secret, letting an attacker self-sign a token using the (often-known) public key
@@ -302,14 +373,15 @@ Occasionally touches token-prediction bugs:
 - **Trusting claims (`role`, `isAdmin`) without re-validating server-side state** — JWT is a bearer credential, not a source of truth for authorization that can change (revoked/demoted users still "valid" until expiry)
 - **No expiry (`exp`) enforcement, or accepting already-expired tokens** due to missing/incorrect validation
 
+<a id="bad-mass-assignment"></a>
 ### Mass Assignment
 - **Binding the entire request body/params object directly to a model/entity** without an explicit allowlist of bindable fields — lets an attacker set fields never exposed on the form (`isAdmin`, `role`, `balance`, `userId` on someone else's record)
 - **Relying on the client to only send expected fields** — the request is attacker-controlled; extra JSON keys are free for the attacker to add
 - **Framework "convenience" binders** (`ModelForm(fields='__all__')`, `UpdateModel()` without includes, ORM `create(req.body)`) — designed for trusted input, misapplied to user input
 
+<a id="bad-hardcoded-secrets"></a>
 ### Hardcoded Secrets / Credentials
 - **Committing `.env`, config files, or connection strings with real credentials** to version control — history persists even after later removal/rotation
 - **Shipping framework scaffold secrets unchanged** (default `SECRET_KEY`, default admin passwords) to production
 - **Embedding API keys/tokens in client-side JS** — anything shipped to the browser is public regardless of minification/obfuscation
 - **Logging secrets** (auth headers, full request bodies with tokens) to application logs that have broader read access than the secret itself warrants
-

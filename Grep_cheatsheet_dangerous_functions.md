@@ -2,6 +2,39 @@
 
 Companion to `Dangerous_functions_and_bad_practices.md`. Every block: `grep -rnE` (recursive, line numbers, extended regex) scoped by file extension. Adjust path (`.` below) to target dir. Drop `-r .` for single-file scans.
 
+## Table of Contents
+- [Dangerous Functions (Sinks)](#dangerous-functions-sinks)
+  - [PHP](#g-php)
+  - [Cross-Language: JWT](#g-jwt)
+  - [Cross-Language: Mass Assignment](#g-mass-assignment)
+  - [Cross-Language: Hardcoded Secrets / Credentials](#g-hardcoded-secrets)
+  - [Java](#g-java)
+  - [Python](#g-python)
+  - [Go](#g-go)
+  - [Node.js / JavaScript](#g-nodejs)
+  - [.NET / C#](#g-dotnet)
+  - [PostgreSQL](#g-postgresql)
+- [Bad Practices](#bad-practices-grep-patterns-by-vulnerability-class)
+  - [SQL](#bp-sql)
+  - [XSS](#bp-xss)
+  - [PHP Type Juggling](#bp-php-type-juggling)
+  - [Deserialization](#bp-deserialization)
+  - [SSTI](#bp-ssti)
+  - [XXE](#bp-xxe)
+  - [CSRF / CORS](#bp-csrf-cors)
+  - [SSRF](#bp-ssrf)
+  - [WebSocket](#bp-websocket)
+  - [NoSQL Injection](#bp-nosql-injection)
+  - [Prototype Pollution](#bp-prototype-pollution)
+  - [LDAP Injection](#bp-ldap-injection)
+  - [XPath Injection](#bp-xpath-injection)
+  - [Open Redirect](#bp-open-redirect)
+  - [Zip Slip / Archive Path Traversal](#bp-zip-slip)
+  - [JNDI Injection / Log Injection (Log4Shell-class)](#bp-jndi-log-injection)
+  - [ReDoS](#bp-redos)
+  - [Weak Cryptography / Insecure Randomness](#bp-weak-crypto)
+  - [File Upload / Path Traversal](#bp-file-upload)
+
 **Noise reduction**: prepend `--exclude-dir={node_modules,vendor,.git,dist,build}` to any command below to skip dependency/build trees, e.g.:
 ```bash
 grep -rnE --exclude-dir={node_modules,vendor,.git,dist,build} --include=*.php 'eval\s*\(' .
@@ -12,6 +45,8 @@ grep -rnE --exclude-dir={node_modules,vendor,.git,dist,build} --include=*.php 'e
 rg -n --type php 'eval\s*\('
 ```
 
+<a id="dangerous-functions-sinks"></a>
+<a id="g-php"></a>
 ## PHP
 
 ```bash
@@ -31,6 +66,7 @@ grep -rnE --include=*.php '==[^=]|in_array\s*\(|switch\s*\(|md5\s*\(.*==|sha1\s*
 grep -rnE --include=*.php 'extract\s*\(|create_function\s*\(|preg_replace\s*\([^)]*/e|call_user_func(_array)?\s*\(' .
 ```
 
+<a id="g-jwt"></a>
 ## Cross-Language: JWT
 
 ```bash
@@ -47,6 +83,7 @@ grep -rnE 'alg.{0,10}none|"none"' . | grep -i jwt
 grep -rnE 'setSigningKey\s*\(|getAlgorithm\s*\(' .
 ```
 
+<a id="g-mass-assignment"></a>
 ## Cross-Language: Mass Assignment
 
 ```bash
@@ -63,6 +100,7 @@ grep -rnE '\.create\s*\(\s*req\.body\s*\)|\.update\s*\(\s*req\.body\s*\)' .
 grep -rnE 'assign_attributes\s*\(|\.new\s*\(\s*params\[' .
 ```
 
+<a id="g-hardcoded-secrets"></a>
 ## Cross-Language: Hardcoded Secrets / Credentials
 
 ```bash
@@ -79,6 +117,7 @@ find . -name '.env' -o -name '*.env'
 git log --all --full-history -- '**/.env' 2>/dev/null
 ```
 
+<a id="g-java"></a>
 ## Java
 
 ```bash
@@ -98,6 +137,7 @@ grep -rnE --include=*.java 'DocumentBuilderFactory|SAXParserFactory|XMLInputFact
 grep -rnE --include=*.java '\bStatement\b.*createStatement|executeQuery\s*\(.*\+' .
 ```
 
+<a id="g-python"></a>
 ## Python
 
 ```bash
@@ -118,6 +158,7 @@ grep -rnE --include=*.py '__import__\s*\(|getattr\s*\(|setattr\s*\(' .
 grep -rnE --include=*.py 'yaml\.load\s*\(' . | grep -vE 'SafeLoader'
 ```
 
+<a id="g-go"></a>
 ## Go
 
 ```bash
@@ -146,6 +187,7 @@ grep -rnE --include=*.go 'math/rand|crypto/md5|crypto/sha1|crypto/des' .
 grep -rnE --include=*.go 'reflect\.Value|MethodByName\s*\(' .
 ```
 
+<a id="g-nodejs"></a>
 ## Node.js / JavaScript
 
 ```bash
@@ -162,6 +204,7 @@ grep -rnE --include=*.js --include=*.ts 'ejs\.render\s*\(|pug\.render\s*\(' .
 grep -rnE --include=*.js --include=*.ts '\$where|\$ne\b|\$gt\b|find\s*\(\s*req\.(body|query)' .
 ```
 
+<a id="g-dotnet"></a>
 ## .NET / C#
 
 ```bash
@@ -178,6 +221,7 @@ grep -rnE --include=*.cs 'SqlCommand\s*\(.*\+|new SqlCommand' .
 grep -rnE --include=*.cs 'XmlResolver\s*=\s*new XmlUrlResolver|XmlDocument\s*\(' .
 ```
 
+<a id="g-postgresql"></a>
 ## PostgreSQL (SQL files / inline queries)
 
 ```bash
@@ -186,10 +230,12 @@ grep -rnE --include=*.sql 'COPY .* FROM PROGRAM|lo_import|lo_export|LANGUAGE\s+(
 
 ---
 
+<a id="bad-practices-grep-patterns-by-vulnerability-class"></a>
 # Bad Practices — Grep Patterns by Vulnerability Class
 
 Many of these are pattern/heuristic hunts, not exact sinks — expect false positives, use as a triage starting point.
 
+<a id="bp-sql"></a>
 ## SQL
 
 ```bash
@@ -199,6 +245,7 @@ grep -rnE '\.raw\s*\(|\.extra\s*\(|text\s*\(' .                  # ORM raw escap
 grep -rnE 'EXEC\s*\(\s*@|EXECUTE\s+' .                           # dynamic SQL in stored procs
 ```
 
+<a id="bp-xss"></a>
 ## XSS
 
 ```bash
@@ -208,6 +255,7 @@ grep -rnE 'unsafe-inline|unsafe-eval' .                           # weak CSP
 grep -rnE 'location\.href|document\.URL|document\.referrer' .     # DOM XSS sources feeding sinks
 ```
 
+<a id="bp-php-type-juggling"></a>
 ## PHP Type Juggling
 
 ```bash
@@ -216,6 +264,7 @@ grep -rnE --include=*.php 'in_array\s*\([^,]+,[^,]+\)\s*;|array_search\s*\([^,]+
 grep -rnE --include=*.php 'is_numeric\s*\(' .                                                      # weak numeric validation
 ```
 
+<a id="bp-deserialization"></a>
 ## Deserialization (cross-language, generic)
 
 ```bash
@@ -223,12 +272,14 @@ grep -rnE 'unserialize\s*\(|ObjectInputStream|BinaryFormatter|pickle\.(load|load
 grep -rnE '__wakeup|__destruct|__toString' .                     # PHP magic methods
 ```
 
+<a id="bp-ssti"></a>
 ## SSTI
 
 ```bash
 grep -rnE 'Template\s*\(\s*\w*(input|param|request)|render_template_string\s*\(' .
 ```
 
+<a id="bp-xxe"></a>
 ## XXE
 
 ```bash
@@ -236,6 +287,7 @@ grep -rnE 'setFeature\s*\(.*external-general-entities|DTD|DocumentBuilderFactory
 grep -rnE '\.svg"|\.docx"|\.xlsx"|Content-Type.*xml' .           # XML-bearing upload paths
 ```
 
+<a id="bp-csrf-cors"></a>
 ## CSRF / CORS
 
 ```bash
@@ -244,6 +296,7 @@ grep -rnE 'SameSite\s*=\s*(Lax|None)' .                           # cookie attri
 grep -rnE 'request\.headers\[.Origin.\]|req\.get\s*\(.Origin.\)' . # Origin reflected without allowlist check
 ```
 
+<a id="bp-ssrf"></a>
 ## SSRF
 
 ```bash
@@ -251,6 +304,7 @@ grep -rnE '127\.0\.0\.1|localhost' . | grep -iE 'block|deny|filter'   # incomple
 grep -rnE 'requests\.get\s*\(|http\.Get\s*\(|urlopen\s*\(|fetch\s*\(' .   # outbound requests to user-supplied URLs
 ```
 
+<a id="bp-websocket"></a>
 ## WebSocket
 
 ```bash
@@ -258,12 +312,14 @@ grep -rnE 'WebSocket|new WebSocket|ws://|wss://' .                # handshake/co
 grep -rnE 'origin\s*===|checkOrigin|verifyClient' .               # existing origin-check logic to audit
 ```
 
+<a id="bp-nosql-injection"></a>
 ## NoSQL Injection
 
 ```bash
 grep -rnE '\$where|find\s*\(\s*req\.(body|query|params)\s*\)' .
 ```
 
+<a id="bp-prototype-pollution"></a>
 ## Prototype Pollution
 
 ```bash
@@ -271,42 +327,49 @@ grep -rnE '__proto__|constructor\.prototype|Object\.assign\s*\(.*req\.(body|quer
 grep -rnE 'merge\s*\(|deepmerge\s*\(|_\.extend\s*\(' .                                   # deep-merge utilities to audit for key blocking
 ```
 
+<a id="bp-ldap-injection"></a>
 ## LDAP Injection
 
 ```bash
 grep -rnE 'DirContext\.search|NamingEnumeration|ldap_search\s*\(|ldap_bind\s*\(|DirectorySearcher|search_s\s*\(' .
 ```
 
+<a id="bp-xpath-injection"></a>
 ## XPath Injection
 
 ```bash
 grep -rnE 'XPath\.evaluate|XPathExpression|->xpath\s*\(|DOMXPath|SelectNodes|SelectSingleNode|etree\.XPath' .
 ```
 
+<a id="bp-open-redirect"></a>
 ## Open Redirect
 
 ```bash
 grep -rnE 'header\s*\(\s*"Location:|sendRedirect\s*\(|Response\.Redirect\s*\(|res\.redirect\s*\(|HttpResponseRedirect\s*\(' .
 ```
 
+<a id="bp-zip-slip"></a>
 ## Zip Slip / Archive Path Traversal
 
 ```bash
 grep -rnE 'extractall\s*\(|ZipInputStream|getName\s*\(\s*\)|extract-zip|adm-zip|ZipArchive::extractTo' .
 ```
 
+<a id="bp-jndi-log-injection"></a>
 ## JNDI Injection / Log Injection (Log4Shell-class)
 
 ```bash
 grep -rnE 'InitialContext\.lookup\s*\(|\$\{jndi:|logger?\.(info|warn|error|debug)\s*\(' .
 ```
 
+<a id="bp-redos"></a>
 ## ReDoS
 
 ```bash
 grep -rnE 'Regex\.Match\s*\(|re\.(match|search)\s*\(|preg_match\s*\(|Pattern\.compile\s*\(|new RegExp\s*\(' .
 ```
 
+<a id="bp-weak-crypto"></a>
 ## Weak Cryptography / Insecure Randomness
 
 ```bash
@@ -318,6 +381,7 @@ grep -rnE 'System\.Random' .                                                 # .
 grep -rnE '\bECB\b|\bDES\b|\bRC4\b' .                                        # weak ciphers, all langs
 ```
 
+<a id="bp-file-upload"></a>
 ## File Upload / Path Traversal
 
 ```bash
