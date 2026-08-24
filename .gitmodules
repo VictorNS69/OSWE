@@ -1,0 +1,3 @@
+[submodule "OSWE-lab-scripts"]
+	path = OSWE-lab-scripts
+	url = git@github.com:VictorNS69/OSWE-lab-scripts.git
